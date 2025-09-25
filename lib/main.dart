@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
             children: const [
               Text("第一行 😀", style: TextStyle(fontSize: 24)),
               Text("第二行 🚀", style: TextStyle(fontSize: 24)),
-              Text("第三行 🎉", style: TextStyle(fontSize: 24)),
+              Text("第3行 🎉", style: TextStyle(fontSize: 24)),
             ],
           ),
         ),
