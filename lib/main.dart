@@ -1,6 +1,5 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,96 +20,152 @@ class TodoListPage extends StatefulWidget {
 }
 
 class _TodoListPageState extends State<TodoListPage> {
+  final List<Map<String, dynamic>> todos = [];
   final TextEditingController _controller = TextEditingController();
-  List<Map<String, dynamic>> todos = [];
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<String> categories = ["全部", "工作", "学习", "生活"];
-  String selectedCategory = "工作"; // 添加任务时的分类
-  String filterCategory = "全部"; // 筛选用的分类
+  String _searchQuery = "";
 
-  @override
-  void initState() {
-    super.initState();
-    _loadTodos();
-  }
-
-  Future<void> _saveTodos() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString("todos", jsonEncode(todos));
-  }
-
-  Future<void> _loadTodos() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? jsonString = prefs.getString("todos");
-    if (jsonString != null) {
-      setState(() {
-        todos = List<Map<String, dynamic>>.from(jsonDecode(jsonString));
-      });
-    }
-  }
-
-  void _addTask() {
+  void _addTask(BuildContext context) async {
     if (_controller.text.trim().isEmpty) return;
+
+    // 选择提醒时间
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    DateTime now = DateTime.now();
+    DateTime reminderTime;
+    if (pickedTime != null) {
+      reminderTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    } else {
+      reminderTime = now;
+    }
+
     setState(() {
       todos.add({
         "title": _controller.text.trim(),
         "done": false,
-        "category": selectedCategory,
+        "date": now,
+        "reminder": reminderTime,
       });
       _controller.clear();
     });
-    _saveTodos();
-  }
 
-  void _deleteTask(int index) {
-    setState(() {
-      todos.removeAt(index);
+    // 设置提醒
+    Duration delay = reminderTime.difference(DateTime.now());
+    if (delay.isNegative) return;
+    Timer(delay, () {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("提醒：${todos.last["title"]}")));
     });
-    _saveTodos();
   }
 
   void _toggleDone(int index) {
     setState(() {
       todos[index]["done"] = !todos[index]["done"];
     });
-    _saveTodos();
   }
 
-  void _confirmDelete(int index) {
+  void _deleteTask(int index) {
+    setState(() {
+      todos.removeAt(index);
+    });
+  }
+
+  /// 📝 编辑任务
+  void _editTask(int index) {
+    TextEditingController editController = TextEditingController(
+      text: todos[index]["title"],
+    );
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("确认删除"),
-        content: Text("你确定要删除 \"${todos[index]["title"]}\" 吗？"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("取消"),
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("编辑任务"),
+          content: TextField(
+            controller: editController,
+            decoration: const InputDecoration(labelText: "修改任务内容"),
           ),
-          TextButton(
-            onPressed: () {
-              _deleteTask(index);
-              Navigator.pop(context);
-            },
-            child: const Text("删除", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("取消"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  todos[index]["title"] = editController.text.trim();
+                });
+                Navigator.pop(context);
+              },
+              child: const Text("保存"),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  String _formatTime(DateTime date) {
+    return "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
   }
 
   @override
   Widget build(BuildContext context) {
-    // 按筛选条件过滤任务
-    List<Map<String, dynamic>> filteredTodos = filterCategory == "全部"
-        ? todos
-        : todos.where((t) => t["category"] == filterCategory).toList();
+    final filteredTodos = todos
+        .where(
+          (task) =>
+              task["title"].toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
+        .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("待办清单（分类+筛选版）")),
+      appBar: AppBar(title: const Text("待办清单（带提醒 + 编辑功能）")),
       body: Column(
         children: [
-          // 输入框 + 分类选择 + 添加按钮
+          // 搜索框
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: "搜索任务",
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = "";
+                          });
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.trim();
+                });
+              },
+            ),
+          ),
+          // 输入框
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -125,83 +180,60 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                DropdownButton<String>(
-                  value: selectedCategory,
-                  items: categories
-                      .where((c) => c != "全部") // 添加任务时不显示「全部」
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCategory = value!;
-                    });
-                  },
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(onPressed: _addTask, child: const Text("添加")),
-              ],
-            ),
-          ),
-
-          // 分类筛选
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              children: [
-                const Text("筛选: "),
-                DropdownButton<String>(
-                  value: filterCategory,
-                  items: categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      filterCategory = value!;
-                    });
-                  },
+                ElevatedButton(
+                  onPressed: () => _addTask(context),
+                  child: const Text("添加"),
                 ),
               ],
             ),
           ),
-
-          // 清单
+          // 列表
           Expanded(
-            child: ListView.builder(
-              itemCount: filteredTodos.length,
-              itemBuilder: (context, index) {
-                final task = filteredTodos[index];
-                return ListTile(
-                  leading: Checkbox(
-                    value: task["done"],
-                    onChanged: (_) {
-                      int originalIndex = todos.indexOf(task);
-                      _toggleDone(originalIndex);
-                    },
-                  ),
-                  title: Text(
-                    task["title"],
-                    style: TextStyle(
-                      decoration: task["done"]
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      color: task["done"] ? Colors.grey : Colors.black,
+            child: filteredTodos.isEmpty
+                ? const Center(
+                    child: Text(
+                      "没有找到相关任务",
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
-                  ),
-                  subtitle: Text("分类: ${task["category"]}"),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      int originalIndex = todos.indexOf(task);
-                      _confirmDelete(originalIndex);
+                  )
+                : ListView.builder(
+                    itemCount: filteredTodos.length,
+                    itemBuilder: (context, index) {
+                      final task = filteredTodos[index];
+                      final taskIndex = todos.indexOf(task);
+
+                      return ListTile(
+                        leading: Checkbox(
+                          value: task["done"],
+                          onChanged: (value) => _toggleDone(taskIndex),
+                        ),
+                        title: Text(
+                          task["title"],
+                          style: TextStyle(
+                            decoration: task["done"]
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                        ),
+                        subtitle: Text(
+                          "创建: ${_formatDate(task["date"])}  提醒: ${_formatTime(task["reminder"])}",
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _editTask(taskIndex),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteTask(taskIndex),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   ),
-                  onLongPress: () {
-                    int originalIndex = todos.indexOf(task);
-                    _confirmDelete(originalIndex);
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
