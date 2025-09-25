@@ -1,48 +1,124 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "练习 2：带图标的列表",
-      home: IconListScreen(),
+      title: 'Day1 Flutter Demo 进阶',
+      home: const ProfileCardInteractive(),
     );
   }
 }
 
-class IconListScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> items = [
-    {"icon": Icons.home, "title": "首页", "subtitle": "欢迎进入主页"},
-    {"icon": Icons.person, "title": "个人资料", "subtitle": "查看和编辑信息"},
-    {"icon": Icons.settings, "title": "设置", "subtitle": "调整应用配置"},
-    {"icon": Icons.message, "title": "消息", "subtitle": "查看最新消息"},
-    {"icon": Icons.logout, "title": "退出登录", "subtitle": "安全退出账号"},
-  ];
+class ProfileCardInteractive extends StatefulWidget {
+  const ProfileCardInteractive({super.key});
+
+  @override
+  State<ProfileCardInteractive> createState() => _ProfileCardInteractiveState();
+}
+
+class _ProfileCardInteractiveState extends State<ProfileCardInteractive> {
+  String _status = "Flutter 新手，正在学习列表和布局。";
+
+  void _updateStatus() {
+    setState(() {
+      _status = "我已学会 Flutter 基础控件 🎉";
+    });
+
+    // 弹窗提示
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("状态更新"),
+        content: Text(_status),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("确定"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("带图标的列表")),
-      body: ListView.builder(
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: Icon(items[index]["icon"], color: Colors.blue),
-            title: Text(items[index]["title"]),
-            subtitle: Text(items[index]["subtitle"]),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("你点击了 ${items[index]["title"]}")),
-              );
-            },
-          );
-        },
+      appBar: AppBar(title: const Text("个人信息卡片互动版")),
+      body: Center(
+        child: Container(
+          width: 300,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.5),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircleAvatar(
+                radius: 50,
+                backgroundImage: NetworkImage(
+                  'https://i.pravatar.cc/150?img=5',
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '小六壬',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _status,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: const [
+                  Icon(Icons.school, color: Colors.blue),
+                  Icon(Icons.code, color: Colors.green),
+                  Icon(Icons.sports_basketball, color: Colors.orange),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // ✅ 多个按钮放在 Row 中
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: _updateStatus, // 按钮 A 更新状态
+                    child: const Text("按钮 A"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {}, // 按钮 B 先空着
+                    child: const Text("按钮 B"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {}, // 按钮 C 先空着
+                    child: const Text("按钮 C"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
