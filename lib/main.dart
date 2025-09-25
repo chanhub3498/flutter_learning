@@ -1,131 +1,210 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: "练习 4 升级版：用户注册和列表",
-      home: RegisterScreen(),
-    );
+    return MaterialApp(debugShowCheckedModeBanner: false, home: TodoListPage());
   }
 }
 
-class User {
-  final String username;
-  final String email;
-  final String password;
-
-  User({required this.username, required this.email, required this.password});
+class TodoListPage extends StatefulWidget {
+  @override
+  State<TodoListPage> createState() => _TodoListPageState();
 }
 
-class RegisterScreen extends StatefulWidget {
-  @override
-  _RegisterScreenState createState() => _RegisterScreenState();
-}
+class _TodoListPageState extends State<TodoListPage> {
+  final TextEditingController _controller = TextEditingController();
+  List<Map<String, dynamic>> todos = [];
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final List<User> _users = []; // 保存所有用户
-
-  String _username = "";
-  String _email = "";
-  String _password = "";
+  final List<String> categories = ["全部", "工作", "学习", "生活"];
+  String selectedCategory = "工作"; // 添加任务时的分类
+  String filterCategory = "全部"; // 筛选用的分类
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("注册页面")),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                decoration: InputDecoration(labelText: "用户名"),
-                onSaved: (value) => _username = value!,
-                validator: (value) => value!.isEmpty ? "请输入用户名" : null,
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: "邮箱"),
-                keyboardType: TextInputType.emailAddress,
-                onSaved: (value) => _email = value!,
-                validator: (value) => value!.contains("@") ? null : "请输入有效的邮箱",
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: "密码"),
-                obscureText: true,
-                onSaved: (value) => _password = value!,
-                validator: (value) => value!.length < 6 ? "密码至少 6 位" : null,
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                child: Text("注册"),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    setState(() {
-                      _users.add(
-                        User(
-                          username: _username,
-                          email: _email,
-                          password: _password,
-                        ),
-                      );
-                    });
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text("注册成功：$_username")));
-                  }
-                },
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                child: Text("查看用户列表"),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserListScreen(users: _users),
-                    ),
-                  );
-                },
-              ),
-            ],
+  void initState() {
+    super.initState();
+    _loadTodos();
+  }
+
+  Future<void> _saveTodos() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString("todos", jsonEncode(todos));
+  }
+
+  Future<void> _loadTodos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString("todos");
+    if (jsonString != null) {
+      setState(() {
+        todos = List<Map<String, dynamic>>.from(jsonDecode(jsonString));
+      });
+    }
+  }
+
+  void _addTask() {
+    if (_controller.text.trim().isEmpty) return;
+    setState(() {
+      todos.add({
+        "title": _controller.text.trim(),
+        "done": false,
+        "category": selectedCategory,
+      });
+      _controller.clear();
+    });
+    _saveTodos();
+  }
+
+  void _deleteTask(int index) {
+    setState(() {
+      todos.removeAt(index);
+    });
+    _saveTodos();
+  }
+
+  void _toggleDone(int index) {
+    setState(() {
+      todos[index]["done"] = !todos[index]["done"];
+    });
+    _saveTodos();
+  }
+
+  void _confirmDelete(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("确认删除"),
+        content: Text("你确定要删除 \"${todos[index]["title"]}\" 吗？"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("取消"),
           ),
-        ),
+          TextButton(
+            onPressed: () {
+              _deleteTask(index);
+              Navigator.pop(context);
+            },
+            child: const Text("删除", style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
-}
-
-class UserListScreen extends StatelessWidget {
-  final List<User> users;
-
-  UserListScreen({required this.users});
 
   @override
   Widget build(BuildContext context) {
+    // 按筛选条件过滤任务
+    List<Map<String, dynamic>> filteredTodos = filterCategory == "全部"
+        ? todos
+        : todos.where((t) => t["category"] == filterCategory).toList();
+
     return Scaffold(
-      appBar: AppBar(title: Text("用户列表")),
-      body: users.isEmpty
-          ? Center(child: Text("暂无用户"))
-          : ListView.builder(
-              itemCount: users.length,
+      appBar: AppBar(title: const Text("待办清单（分类+筛选版）")),
+      body: Column(
+        children: [
+          // 输入框 + 分类选择 + 添加按钮
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      labelText: "输入新任务",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: selectedCategory,
+                  items: categories
+                      .where((c) => c != "全部") // 添加任务时不显示「全部」
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedCategory = value!;
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(onPressed: _addTask, child: const Text("添加")),
+              ],
+            ),
+          ),
+
+          // 分类筛选
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                const Text("筛选: "),
+                DropdownButton<String>(
+                  value: filterCategory,
+                  items: categories
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      filterCategory = value!;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // 清单
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredTodos.length,
               itemBuilder: (context, index) {
-                final user = users[index];
+                final task = filteredTodos[index];
                 return ListTile(
-                  leading: Icon(Icons.person, color: Colors.blue),
-                  title: Text(user.username),
-                  subtitle: Text(user.email),
+                  leading: Checkbox(
+                    value: task["done"],
+                    onChanged: (_) {
+                      int originalIndex = todos.indexOf(task);
+                      _toggleDone(originalIndex);
+                    },
+                  ),
+                  title: Text(
+                    task["title"],
+                    style: TextStyle(
+                      decoration: task["done"]
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      color: task["done"] ? Colors.grey : Colors.black,
+                    ),
+                  ),
+                  subtitle: Text("分类: ${task["category"]}"),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      int originalIndex = todos.indexOf(task);
+                      _confirmDelete(originalIndex);
+                    },
+                  ),
+                  onLongPress: () {
+                    int originalIndex = todos.indexOf(task);
+                    _confirmDelete(originalIndex);
+                  },
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 }
