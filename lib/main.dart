@@ -12,27 +12,57 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text("Row + Column Example")),
-        body: Center(
+        appBar: AppBar(title: const Text("手机菜单界面")),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("上面 🏔️", style: TextStyle(fontSize: 24)),
-              const SizedBox(height: 20),
+              const Text(
+                "我的应用",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 30),
+              // 第一行菜单
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Text("左边 🏠", style: TextStyle(fontSize: 24)),
-                  SizedBox(width: 20),
-                  Text("右边 🚗", style: TextStyle(fontSize: 24)),
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  menuItem(Icons.home, "首页"),
+                  menuItem(Icons.search, "搜索"),
+                  menuItem(Icons.settings, "设置"),
                 ],
               ),
-              const SizedBox(height: 20),
-              const Text("下面 🌊", style: TextStyle(fontSize: 24)),
+              const SizedBox(height: 30),
+              // 第二行菜单
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  menuItem(Icons.person, "我的"),
+                  menuItem(Icons.message, "消息"),
+                  menuItem(Icons.notifications, "通知"),
+                ],
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // 自定义菜单项 Widget
+  Widget menuItem(IconData icon, String label) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.blue[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Icon(icon, size: 36, color: Colors.blue),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontSize: 16)),
+      ],
     );
   }
 }
