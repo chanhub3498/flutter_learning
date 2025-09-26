@@ -12,15 +12,23 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text("Column Example")),
+        appBar: AppBar(title: const Text("Row + Column Example")),
         body: Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center, // 垂直居中
-            crossAxisAlignment: CrossAxisAlignment.center, // 水平居中
-            children: const [
-              Text("第一行 😀", style: TextStyle(fontSize: 24)),
-              Text("第二行 🚀", style: TextStyle(fontSize: 24)),
-              Text("第3行 🎉", style: TextStyle(fontSize: 24)),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("上面 🏔️", style: TextStyle(fontSize: 24)),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Text("左边 🏠", style: TextStyle(fontSize: 24)),
+                  SizedBox(width: 20),
+                  Text("右边 🚗", style: TextStyle(fontSize: 24)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text("下面 🌊", style: TextStyle(fontSize: 24)),
             ],
           ),
         ),
