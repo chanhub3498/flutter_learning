@@ -12,34 +12,55 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text("手机菜单界面")),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
+        backgroundColor: Colors.grey[200],
+        body: SafeArea(
           child: Column(
             children: [
-              const Text(
-                "我的应用",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              // 顶部标题
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: const Text(
+                  "主界面布局",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
               ),
-              const SizedBox(height: 30),
+
               // 第一行菜单
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  menuItem(Icons.home, "首页"),
-                  menuItem(Icons.search, "搜索"),
-                  menuItem(Icons.settings, "设置"),
+                  Expanded(child: menuBox(Icons.home, "首页", Colors.blue)),
+                  Expanded(child: menuBox(Icons.search, "搜索", Colors.green)),
                 ],
               ),
-              const SizedBox(height: 30),
+
               // 第二行菜单
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  menuItem(Icons.person, "我的"),
-                  menuItem(Icons.message, "消息"),
-                  menuItem(Icons.notifications, "通知"),
+                  Expanded(child: menuBox(Icons.person, "我的", Colors.orange)),
+                  Expanded(child: menuBox(Icons.settings, "设置", Colors.purple)),
                 ],
+              ),
+
+              // Spacer 撑开，把按钮挤到底部
+              const Spacer(),
+
+              // 底部按钮
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.blue,
+                    ),
+                    child: const Text(
+                      "立即开始",
+                      style: TextStyle(fontSize: 20, color: Colors.white),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -48,21 +69,23 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  // 自定义菜单项 Widget
-  Widget menuItem(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.blue[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Icon(icon, size: 36, color: Colors.blue),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 16)),
-      ],
+  // 自定义菜单 Box
+  static Widget menuBox(IconData icon, String label, Color color) {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      height: 120,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 40, color: color),
+          const SizedBox(height: 10),
+          Text(label, style: TextStyle(fontSize: 18, color: color)),
+        ],
+      ),
     );
   }
 }
